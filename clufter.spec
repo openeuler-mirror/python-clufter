@@ -2,17 +2,14 @@
 # virtual provides:
 #   clufter        -> clufter-cli
 #   clufter-lib    -> python.+-clufter (any if multiple)
-#   python-clufter -> python2-clufter (subject of change)
 
-# conditionals:
-%bcond_with python2
 
 # https://fedoraproject.org/wiki/Packaging:Python_Appendix#Manual_byte_compilation
 %global __os_install_post %(echo '%{__os_install_post}' | sed -e 's!/usr/lib[^[:space:]]*/brp-python-bytecompile[[:space:]].*$!!g')
 
 Name:           clufter
 Version:        0.77.2
-Release:        1
+Release:        2
 Summary:        Tool/library for transforming/analyzing cluster configuration formats
 License:        GPLv2+
 URL:            https://pagure.io/%{name}
@@ -23,13 +20,6 @@ BuildRequires:  git-core
 %if 0%{defined gpgverify}
 # required for OpenPGP package signature verification (per guidelines)
 BuildRequires: gnupg2
-%endif
-
-%if %{with python2}
-# Python 2 related
-BuildRequires:  python2-devel
-BuildRequires:  python2-setuptools
-BuildRequires:  python2-lxml
 %endif
 
 # Python 3 related
@@ -109,34 +99,14 @@ framework (capable of XSLT) offers also other uses through its plugin library.
 This package contains %{name} command-line interface for the underlying
 library (packaged as python3-%{name}).
 
-%if %{with python2}
-%package -n python2-%{name}
-Summary:        Library for transforming/analyzing cluster configuration formats
-License:        GPLv2+ and GFDL
-
-Provides:       %{name}-lib = %{version}-%{release}
-%{?python_provide:%python_provide python2-%{name}}
-Requires:       %{name}-bin = %{version}-%{release}
-BuildArch:      noarch
-
-%description -n python2-%{name}
-While primarily aimed at (CMAN,rgmanager)->(Corosync/CMAN,Pacemaker) cluster
-stacks configuration conversion (as per RHEL trend), the command-filter-format
-framework (capable of XSLT) offers also other uses through its plugin library.
-
-This package contains %{name} library including built-in plugins.
-%endif
-
 %package -n python3-%{name}
 Summary:        Library for transforming/analyzing cluster configuration formats
 License:        GPLv2+ and GFDL
 
 Provides:       %{name}-lib = %{version}-%{release}
 %{?python_provide:%python_provide python3-%{name}}
-%if %{without python2}
 Obsoletes:      python-%{name} < %{version}-%{release}
 Obsoletes:      python2-%{name} < %{version}-%{release}
-%endif
 Requires:       %{name}-bin = %{version}-%{release}
 BuildArch:      noarch
 
@@ -231,9 +201,6 @@ popd
   --report-bugs='https://bugzilla.redhat.com/enter_bug.cgi?product=Fedora&component=%{name}'
 
 %build
-%if %{with python2}
-%py2_build
-%endif
 # see https://fedoraproject.org/wiki/Changes/python3_c.utf-8_locale;
 # specifically:
 #   File "setup.py", line 466, in _pkg_prepare_file
@@ -293,9 +260,6 @@ done < .subcmds
 OUTPUTDIR=.schemas POSTPROCESS="%{SOURCE2}" sh "%{SOURCE3}" --clobber
 
 %install
-%if %{with python2}
-%py2_install
-%endif
 # see build section
 export LC_ALL=C.UTF-8 LANG=C.UTF-8
 %py3_install
@@ -313,12 +277,7 @@ test -f '%{buildroot}%{_bindir}/%{name}' \
 for format in cib corosync; do
   %{__cp} -a -t '%{buildroot}%{_datarootdir}/%{name}/formats' \
           -- "%{buildroot}%{python3_sitelib}/%{name}/formats/${format}"
-%if %{with python2}
-  %{__rm} -f -- "%{buildroot}%{python2_sitelib}/%{name}/formats/${format}"/*
-  ln -s -t "%{buildroot}%{python2_sitelib}/%{name}/formats/${format}" \
-     -- $(pushd "%{buildroot}%{_datarootdir}/%{name}/formats/${format}" >/dev/null; \
-          ls -1A | sed "s:.*:%{_datarootdir}/%{name}/formats/${format}/\\0:")
-%endif
+
   %{__rm} -f -- "%{buildroot}%{python3_sitelib}/%{name}/formats/${format}"/*
   ln -s -t "%{buildroot}%{python3_sitelib}/%{name}/formats/${format}" \
      -- $(pushd "%{buildroot}%{_datarootdir}/%{name}/formats/${format}" >/dev/null; \
@@ -328,10 +287,6 @@ done
 # move ext-plugins from python-specific locations to a single common one
 # incl. the different sorts of precompiled bytecodes
 %{__mkdir_p} -- '%{buildroot}%{_datarootdir}/%{name}/ext-plugins'
-%if %{with python2}
-mv -t '%{buildroot}%{_datarootdir}/%{name}/ext-plugins' \
-   -- '%{buildroot}%{python2_sitelib}/%{name}'/ext-plugins/*/
-%endif
 %{__cp} -af -t '%{buildroot}%{_datarootdir}/%{name}/ext-plugins' \
         -- '%{buildroot}%{python3_sitelib}/%{name}'/ext-plugins/*
 %{__rm} -rf -- '%{buildroot}%{python3_sitelib}/%{name}'/ext-plugins/*/
@@ -341,15 +296,6 @@ mv -t '%{buildroot}%{_datarootdir}/%{name}/ext-plugins' \
 # then boundary where no to use sanity options (against revamped version
 # of that macro, since it exactly abuses what shall not be done in the
 # buildroot, alas...)
-%if %{with python2}
-%if ("%{?quote:1}" != "" && "%{?quote:1}" != "1" && (0%{?fedora} && 0%{?fedora} <= 30 || 0%{?rhel} && 0%{?rhel} <= 8))
-%py_byte_compile %{quote:%{__python2} -Es} %{python2_sitelib}/%{name}
-%py_byte_compile %{quote:%{__python2} -Es} %{buildroot}%{_datarootdir}/%{name}/ext-plugins
-%else
-%py_byte_compile %{__python2} %{python2_sitelib}/%{name}
-%py_byte_compile %{__python2} %{buildroot}%{_datarootdir}/%{name}/ext-plugins
-%endif
-%endif
 %if ("%{?quote:1}" != "" && "%{?quote:1}" != "1" && (0%{?fedora} && 0%{?fedora} <= 30 || 0%{?rhel} && 0%{?rhel} <= 8))
 %py_byte_compile %{quote:%{__python3} -I} %{python3_sitelib}/%{name}
 %py_byte_compile %{quote:%{__python3} -I} %{buildroot}%{_datarootdir}/%{name}/ext-plugins
@@ -396,9 +342,6 @@ declare ret=0 \
         ccs_flatten_dir="$(dirname '%{buildroot}%{_libexecdir}/%{name}-%{version}/ccs_flatten')"
 ln -s '%{buildroot}%{_datadir}/cluster'/*.'metadata' \
       "${ccs_flatten_dir}"
-%if %{with python2}
-PATH="${PATH:+${PATH}:}${ccs_flatten_dir}" PYTHONEXEC="%{__python2} -Es" ./run-tests
-%endif
 # see build section
 export LC_ALL=C.UTF-8 LANG=C.UTF-8
 PATH="${PATH:+${PATH}:}${ccs_flatten_dir}" PYTHONEXEC="%{__python3} -I" ./run-tests
@@ -434,12 +377,6 @@ test -x '%{_bindir}/%{name}' && test -f "${bashcomp}" \
 %{_mandir}/man1/*.1*
 %{_bindir}/%{name}
 
-%if %{with python2}
-%files -n python2-%{name}
-%{python2_sitelib}/%{name}
-%{python2_sitelib}/%{name}-*.egg-info
-%endif
-
 %files -n python3-%{name}
 %{python3_sitelib}/%{name}
 %{python3_sitelib}/%{name}-*.egg-info
@@ -464,5 +401,8 @@ test -x '%{_bindir}/%{name}' && test -f "${bashcomp}" \
 %{_datarootdir}/%{name}/ext-plugins/lib-pcs
 
 %changelog
+* Tue Feb 23 2021 yangzhao <yangzhao1@kylinos.cn> - 0.77.2-2
+- remove python2 support
+
 * Fri Dec 4 2020 liqiuyu <liqiuyu@kylinos.cn> - 0.77.2-1
 - Init python-clufter project
