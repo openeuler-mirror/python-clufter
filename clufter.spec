@@ -9,7 +9,7 @@
 
 Name:           clufter
 Version:        0.77.2
-Release:        2
+Release:        3
 Summary:        Tool/library for transforming/analyzing cluster configuration formats
 License:        GPLv2+
 URL:            https://pagure.io/%{name}
@@ -291,18 +291,6 @@ done
         -- '%{buildroot}%{python3_sitelib}/%{name}'/ext-plugins/*
 %{__rm} -rf -- '%{buildroot}%{python3_sitelib}/%{name}'/ext-plugins/*/
 
-# byte-compilation
-# py_byte_compile macro introduced in Fedora in python3 for f13, f30 is
-# then boundary where no to use sanity options (against revamped version
-# of that macro, since it exactly abuses what shall not be done in the
-# buildroot, alas...)
-%if ("%{?quote:1}" != "" && "%{?quote:1}" != "1" && (0%{?fedora} && 0%{?fedora} <= 30 || 0%{?rhel} && 0%{?rhel} <= 8))
-%py_byte_compile %{quote:%{__python3} -I} %{python3_sitelib}/%{name}
-%py_byte_compile %{quote:%{__python3} -I} %{buildroot}%{_datarootdir}/%{name}/ext-plugins
-%else
-%py_byte_compile %{__python3} %{python3_sitelib}/%{name}
-%py_byte_compile %{__python3} %{buildroot}%{_datarootdir}/%{name}/ext-plugins
-%endif
 
 declare bashcompdir="$(pkg-config --variable=completionsdir bash-completion \
                        || echo '%{_datadir}/bash-completion/completions')"
@@ -401,6 +389,9 @@ test -x '%{_bindir}/%{name}' && test -f "${bashcomp}" \
 %{_datarootdir}/%{name}/ext-plugins/lib-pcs
 
 %changelog
+* Fri May 20 2022 caodongxia <caodongxia@h-partners.com> - 0.77.2-3
+- remove useless code
+
 * Tue Feb 23 2021 yangzhao <yangzhao1@kylinos.cn> - 0.77.2-2
 - remove python2 support
 
